@@ -7,13 +7,16 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
+    env:
+      PATH: /usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Unlock macOS keychain
+        run: security unlock-keychain -p "0000" ~/Library/Keychains/login.keychain-db
+
       - name: Deploy with Docker Compose
-        env:
-          PATH: /usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
         run: |
           cd ${{ github.workspace }}
           docker compose down || true
