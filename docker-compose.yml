@@ -23,7 +23,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       DATABASE_URL: "postgresql://promptlib:promptlib123@db:5432/promptlib?schema=public"
     depends_on:
