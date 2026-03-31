@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Prompt, Tag, TagGroup, TagPool } from "@/types";
 import { TagBadge } from "@/components/TagBadge";
 import { PromptModal } from "@/components/PromptModal";
@@ -27,6 +28,7 @@ export default function HomePage() {
   const [search, setSearch] = useState("");
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [addTagModal, setAddTagModal] = useState<{ open: boolean; group?: TagGroup }>({ open: false });
+  const router = useRouter();
 
   useEffect(() => {
     Promise.all([
@@ -107,6 +109,11 @@ export default function HomePage() {
       }));
     }
   };
+
+  const handleEditPrompt = useCallback((id: string) => {
+    setSelectedPrompt(null);
+    router.push(`/edit/${id}`);
+  }, [router]);
 
   const handleDeletePrompt = async (id: string) => {
     const res = await fetch(`/api/prompts/${id}`, { method: "DELETE" });
@@ -405,6 +412,7 @@ export default function HomePage() {
       <PromptModal
         prompt={selectedPrompt}
         onClose={() => setSelectedPrompt(null)}
+        onEdit={handleEditPrompt}
         onDelete={handleDeletePrompt}
       />
 

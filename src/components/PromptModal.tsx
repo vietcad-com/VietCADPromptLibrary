@@ -7,10 +7,11 @@ import { TagBadge } from "./TagBadge";
 interface PromptModalProps {
   prompt: Prompt | null;
   onClose: () => void;
+  onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
 
-export function PromptModal({ prompt, onClose, onDelete }: PromptModalProps) {
+export function PromptModal({ prompt, onClose, onEdit, onDelete }: PromptModalProps) {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -281,6 +282,23 @@ export function PromptModal({ prompt, onClose, onDelete }: PromptModalProps) {
             <span style={{ fontSize: 12, color: "#9c9a92" }}>
               Tạo bởi {prompt.author} · {prompt.createdAt}
             </span>
+            {onEdit && (
+              <button
+                onClick={() => onEdit(prompt.id)}
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: 6,
+                  border: "0.5px solid rgba(0,0,0,0.1)",
+                  background: "transparent",
+                  color: "#378ADD",
+                  fontSize: 11,
+                  cursor: "pointer",
+                  transition: "all .15s",
+                }}
+              >
+                Sửa
+              </button>
+            )}
             {onDelete && (
               <button
                 onClick={handleDelete}
