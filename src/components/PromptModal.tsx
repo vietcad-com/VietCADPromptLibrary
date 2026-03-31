@@ -7,18 +7,24 @@ import { TagBadge } from "./TagBadge";
 interface PromptModalProps {
   prompt: Prompt | null;
   onClose: () => void;
+  onDelete?: (id: string) => void;
 }
 
-export function PromptModal({ prompt, onClose }: PromptModalProps) {
+export function PromptModal({ prompt, onClose, onDelete }: PromptModalProps) {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (confirmDelete) setConfirmDelete(false);
+        else onClose();
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [onClose, confirmDelete]);
 
   useEffect(() => {
     if (prompt) document.body.style.overflow = "hidden";
@@ -33,6 +39,12 @@ export function PromptModal({ prompt, onClose }: PromptModalProps) {
     }
   }, [copiedIdx]);
 
+  // Reset confirm state when modal changes
+  useEffect(() => {
+    setConfirmDelete(false);
+    setDeleting(false);
+  }, [prompt?.id]);
+
   if (!prompt) return null;
 
   const handleCopyItem = (idx: number) => {
@@ -46,6 +58,15 @@ export function PromptModal({ prompt, onClose }: PromptModalProps) {
       .join("\n\n");
     navigator.clipboard.writeText(allContent);
     setCopiedIdx(-1);
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setDeleting(true);
+    onDelete?.(prompt.id);
   };
 
   return (
@@ -131,7 +152,6 @@ export function PromptModal({ prompt, onClose }: PromptModalProps) {
 
         {/* Body — scrollable */}
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
-          {/* Prompt items */}
           {prompt.items.map((item, idx) => (
             <div
               key={idx}
@@ -149,22 +169,22 @@ export function PromptModal({ prompt, onClose }: PromptModalProps) {
               >
                 <div
                   style={{
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: 600,
                     color: "#1a1a18",
                     display: "flex",
                     alignItems: "center",
-                    gap: 6,
+                    gap: 8,
                   }}
                 >
                   <span
                     style={{
-                      width: 22,
-                      height: 22,
+                      width: 24,
+                      height: 24,
                       borderRadius: "50%",
                       background: "#378ADD",
                       color: "#fff",
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 600,
                       display: "inline-flex",
                       alignItems: "center",
@@ -257,9 +277,29 @@ export function PromptModal({ prompt, onClose }: PromptModalProps) {
             gap: 10,
           }}
         >
-          <span style={{ fontSize: 12, color: "#9c9a92" }}>
-            Tạo bởi {prompt.author} · {prompt.createdAt}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 12, color: "#9c9a92" }}>
+              Tạo bởi {prompt.author} · {prompt.createdAt}
+            </span>
+            {onDelete && (
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: 6,
+                  border: `0.5px solid ${confirmDelete ? "#E24B4A" : "rgba(0,0,0,0.1)"}`,
+                  background: confirmDelete ? "#FEE8E7" : "transparent",
+                  color: confirmDelete ? "#E24B4A" : "#9c9a92",
+                  fontSize: 11,
+                  cursor: deleting ? "not-allowed" : "pointer",
+                  transition: "all .15s",
+                }}
+              >
+                {deleting ? "Đang xoá..." : confirmDelete ? "Xác nhận xoá?" : "Xoá"}
+              </button>
+            )}
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button
               onClick={onClose}

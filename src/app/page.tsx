@@ -108,6 +108,14 @@ export default function HomePage() {
     }
   };
 
+  const handleDeletePrompt = async (id: string) => {
+    const res = await fetch(`/api/prompts/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setPrompts((prev) => prev.filter((p) => p.id !== id));
+      setSelectedPrompt(null);
+    }
+  };
+
   const hasAnyFilter = GROUP_ORDER.some((g) => activeFilters[g].length > 0);
 
   if (loading) {
@@ -321,27 +329,39 @@ export default function HomePage() {
                   </span>
                 </div>
 
-                {/* Show sub-prompt headers as preview */}
+                {/* Show sub-prompt headers + content preview */}
                 <div style={{ marginBottom: 10 }}>
                   {prompt.items.map((item, idx) => (
-                    <p
-                      key={idx}
-                      style={{
-                        fontSize: 12,
-                        color: "#5f5e5a",
-                        lineHeight: 1.6,
-                        margin: 0,
-                        display: "-webkit-box",
-                        WebkitLineClamp: 1,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <span style={{ color: "#9c9a92", fontWeight: 500 }}>
-                        {idx + 1}.
-                      </span>{" "}
-                      {item.header}
-                    </p>
+                    <div key={idx} style={{ marginBottom: idx < prompt.items.length - 1 ? 6 : 0 }}>
+                      <p
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 500,
+                          color: "#1a1a18",
+                          lineHeight: 1.5,
+                          margin: 0,
+                        }}
+                      >
+                        <span style={{ color: "#378ADD", fontWeight: 600 }}>
+                          {idx + 1}.
+                        </span>{" "}
+                        {item.header}
+                      </p>
+                      <p
+                        style={{
+                          fontSize: 11,
+                          color: "#9c9a92",
+                          lineHeight: 1.5,
+                          margin: "2px 0 0 18px",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {item.content}
+                      </p>
+                    </div>
                   ))}
                 </div>
 
@@ -382,7 +402,11 @@ export default function HomePage() {
         )}
       </main>
 
-      <PromptModal prompt={selectedPrompt} onClose={() => setSelectedPrompt(null)} />
+      <PromptModal
+        prompt={selectedPrompt}
+        onClose={() => setSelectedPrompt(null)}
+        onDelete={handleDeletePrompt}
+      />
 
       {addTagModal.open && (
         <AddTagModal
