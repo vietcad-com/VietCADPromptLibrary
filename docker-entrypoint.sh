@@ -22,14 +22,13 @@ async function seed() {
   ];
   await prisma.tag.createMany({data:tags});
   const prompts = [
-    {title:'Tạo banner sản phẩm CAD',content:'Tạo hình ảnh banner chuyên nghiệp cho phần mềm {{tên sản phẩm}}, yêu cầu:\n- Background: tối, gradient xanh navy sang đen\n- Ánh sáng kỹ thuật số, hiệu ứng glowing\n- Typography: bold, hiện đại, màu trắng/xanh cyan\n- Kích thước: {{kích thước banner}}\n- Tone: premium, high-tech, B2B',note:'Prompt này hoạt động tốt nhất với Gemini Image và ChatGPT DALL-E 3.',author:'Dat',tagIds:['gemini','chatgpt','image','marketing']},
-    {title:'Ảnh thumbnail YouTube',content:'Generate thumbnail YouTube style với các yêu cầu:\n- Màu sắc bắt mắt, tương phản cao\n- Text overlay rõ ràng, font bold không quá 6 từ\n- Tỉ lệ 16:9 (1280x720px)',note:'Midjourney cho kết quả đẹp hơn về mặt thẩm mỹ.',author:'Linh',tagIds:['gemini','midjourney','image','tech']},
-    {title:'Email chào hàng khách doanh nghiệp',content:'Viết email chào hàng B2B cho {{tên công ty khách}}, ngành {{ngành khách hàng}}.\n\nYêu cầu:\n- Tone: chuyên nghiệp\n- Độ dài: 150–200 từ\n- CTA: đặt lịch demo 30 phút',note:'Luôn thêm tên công ty khách vào dòng đầu.',author:'Hương',tagIds:['claude','chatgpt','text','marketing','sale']},
-    {title:'Slide pitch deck sản phẩm',content:'Tạo outline cho slide pitch deck {{tên sản phẩm/dịch vụ}}, gồm 10 slide.',note:'Dùng output này làm outline, sau đó đưa vào Gamma.app hoặc Canva.',author:'Nam',tagIds:['chatgpt','claude','ppt','marketing']},
-    {title:'Tóm tắt báo cáo tài chính tháng',content:'Phân tích và tóm tắt báo cáo tài chính tháng {{tháng/năm}}.',note:'Nhớ xoá thông tin nhạy cảm trước khi paste vào AI.',author:'Trang',tagIds:['claude','chatgpt','text','accounting']}
+    {title:'Tạo banner sản phẩm CAD',author:'Dat',tagIds:['gemini','chatgpt','image','marketing'],
+      items:[{header:'Banner chính cho website',content:'Tạo hình ảnh banner chuyên nghiệp cho phần mềm {{tên sản phẩm}}'},{header:'Banner cho social media',content:'Tạo hình ảnh banner cho social media quảng cáo phần mềm {{tên sản phẩm}}'}]},
+    {title:'Email chào hàng khách doanh nghiệp',author:'Hương',tagIds:['claude','chatgpt','text','marketing','sale'],
+      items:[{header:'Email giới thiệu lần đầu',content:'Viết email chào hàng B2B cho {{tên công ty khách}}'},{header:'Email follow-up sau demo',content:'Viết email follow-up sau buổi demo cho {{tên khách hàng}}'}]},
   ];
-  for (const {tagIds,...d} of prompts) {
-    await prisma.prompt.create({data:{...d,tags:{create:tagIds.map(t=>({tagId:t}))}}});
+  for (const {tagIds,items,...d} of prompts) {
+    await prisma.prompt.create({data:{...d,items:{create:items.map((it,i)=>({header:it.header,content:it.content,position:i}))},tags:{create:tagIds.map(t=>({tagId:t}))}}});
   }
   console.log('Seeded ' + tags.length + ' tags and ' + prompts.length + ' prompts');
 }

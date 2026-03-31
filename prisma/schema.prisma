@@ -21,14 +21,26 @@ model Tag {
 model Prompt {
   id        String   @id @default(cuid())
   title     String
-  content   String
   note      String?
   author    String
   createdAt DateTime @default(now()) @map("created_at")
 
-  tags PromptTag[]
+  items PromptItem[]
+  tags  PromptTag[]
 
   @@map("prompts")
+}
+
+model PromptItem {
+  id       String @id @default(cuid())
+  header   String
+  content  String
+  position Int    @default(0)
+
+  promptId String @map("prompt_id")
+  prompt   Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@map("prompt_items")
 }
 
 model PromptTag {

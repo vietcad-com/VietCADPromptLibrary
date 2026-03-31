@@ -18,7 +18,6 @@ export default function HomePage() {
   const [tagPool, setTagPool] = useState<TagPool>({ model: [], type: [], topic: [] });
   const [loading, setLoading] = useState(true);
 
-  // Filter state
   const [activeFilters, setActiveFilters] = useState<Record<TagGroup, string[]>>({
     model: [],
     type: [],
@@ -29,7 +28,6 @@ export default function HomePage() {
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [addTagModal, setAddTagModal] = useState<{ open: boolean; group?: TagGroup }>({ open: false });
 
-  // Fetch data from API
   useEffect(() => {
     Promise.all([
       fetch("/api/prompts").then((r) => r.json()),
@@ -53,15 +51,19 @@ export default function HomePage() {
     });
   };
 
-  // Filtered prompts: AND between groups, OR within group
   const filteredPrompts = useMemo(() => {
     return prompts.filter((p) => {
       const tagIds = p.tags.map((t) => t.id);
 
+      const searchLower = search.toLowerCase();
       const matchSearch =
         !search ||
-        p.title.toLowerCase().includes(search.toLowerCase()) ||
-        p.content.toLowerCase().includes(search.toLowerCase());
+        p.title.toLowerCase().includes(searchLower) ||
+        p.items.some(
+          (item) =>
+            item.header.toLowerCase().includes(searchLower) ||
+            item.content.toLowerCase().includes(searchLower)
+        );
 
       const matchModel =
         activeFilters.model.length === 0 ||
@@ -92,7 +94,6 @@ export default function HomePage() {
     return parts.join(" và ");
   }, [activeFilters, tagPool]);
 
-  // Add new tag via API
   const handleAddTag = async (tag: Tag) => {
     const res = await fetch("/api/tags", {
       method: "POST",
@@ -178,7 +179,6 @@ export default function HomePage() {
           </div>
         ))}
 
-        {/* Logic info */}
         <div
           style={{
             marginTop: 20,
@@ -320,24 +320,47 @@ export default function HomePage() {
                     {prompt.createdAt}
                   </span>
                 </div>
-                <p
-                  style={{
-                    fontSize: 12,
-                    color: "#5f5e5a",
-                    marginBottom: 10,
-                    lineHeight: 1.6,
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                  }}
-                >
-                  {prompt.content}
-                </p>
+
+                {/* Show sub-prompt headers as preview */}
+                <div style={{ marginBottom: 10 }}>
+                  {prompt.items.map((item, idx) => (
+                    <p
+                      key={idx}
+                      style={{
+                        fontSize: 12,
+                        color: "#5f5e5a",
+                        lineHeight: 1.6,
+                        margin: 0,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 1,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <span style={{ color: "#9c9a92", fontWeight: 500 }}>
+                        {idx + 1}.
+                      </span>{" "}
+                      {item.header}
+                    </p>
+                  ))}
+                </div>
+
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                   {prompt.tags.map((tag) => (
                     <TagBadge key={tag.id} tag={tag} />
                   ))}
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: "#5f5e5a",
+                      background: "#f1efe8",
+                      border: "0.5px solid rgba(0,0,0,0.08)",
+                      borderRadius: 20,
+                      padding: "3px 8px",
+                    }}
+                  >
+                    {prompt.items.length} prompt
+                  </span>
                   {prompt.note && (
                     <span
                       style={{
@@ -359,7 +382,6 @@ export default function HomePage() {
         )}
       </main>
 
-      {/* MODALS */}
       <PromptModal prompt={selectedPrompt} onClose={() => setSelectedPrompt(null)} />
 
       {addTagModal.open && (

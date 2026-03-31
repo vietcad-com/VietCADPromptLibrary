@@ -22,45 +22,79 @@ const TAGS = [
 const PROMPTS = [
   {
     title: "Tạo banner sản phẩm CAD",
-    content: `Tạo hình ảnh banner chuyên nghiệp cho phần mềm {{tên sản phẩm}}, yêu cầu:
+    items: [
+      {
+        header: "Banner chính cho website",
+        content: `Tạo hình ảnh banner chuyên nghiệp cho phần mềm {{tên sản phẩm}}, yêu cầu:
 - Background: tối, gradient xanh navy sang đen
 - Ánh sáng kỹ thuật số, hiệu ứng glowing
 - Typography: bold, hiện đại, màu trắng/xanh cyan
 - Kích thước: {{kích thước banner}}
 - Tone: premium, high-tech, B2B`,
-    note: "Prompt này hoạt động tốt nhất với Gemini Image và ChatGPT DALL-E 3. Không dùng cho Claude vì Claude không hỗ trợ sinh ảnh. Kết quả tốt nhất khi chạy 3–5 lần và chọn ảnh ưng ý nhất.",
+      },
+      {
+        header: "Banner cho social media",
+        content: `Tạo hình ảnh banner cho social media quảng cáo phần mềm {{tên sản phẩm}}:
+- Kích thước: 1200x628px (Facebook) hoặc 1080x1080px (Instagram)
+- Nổi bật tính năng: {{tính năng chính}}
+- Có CTA button "Dùng thử miễn phí"
+- Tone: năng động, chuyên nghiệp`,
+      },
+    ],
+    note: "Prompt này hoạt động tốt nhất với Gemini Image và ChatGPT DALL-E 3. Kết quả tốt nhất khi chạy 3–5 lần và chọn ảnh ưng ý nhất.",
     author: "Dat",
     createdAt: new Date("2026-03-28"),
     tagIds: ["gemini", "chatgpt", "image", "marketing"],
   },
   {
-    title: "Ảnh thumbnail YouTube",
-    content: `Generate thumbnail YouTube style với các yêu cầu:
-- Màu sắc bắt mắt, tương phản cao
-- Text overlay rõ ràng, font bold không quá 6 từ
-- Tỉ lệ 16:9 (1280x720px)
-- Chủ đề: {{chủ đề video}}
-- Phong cách: {{phong cách (ví dụ: minimalist, dramatic, playful)}}`,
-    note: "Midjourney cho kết quả đẹp hơn về mặt thẩm mỹ. Gemini nhanh hơn và miễn phí.",
-    author: "Linh",
+    title: "Tổng hợp Chấm công Đi muộn Về sớm",
+    items: [
+      {
+        header: "Từ file chi tiết chấm công",
+        content: `Phân tích file chấm công đính kèm và tổng hợp:
+1. Danh sách nhân viên đi muộn (sau {{giờ bắt đầu}})
+2. Danh sách nhân viên về sớm (trước {{giờ kết thúc}})
+3. Số lần vi phạm của từng người trong tháng
+4. Tổng số giờ đi muộn/về sớm
+
+Output dạng bảng, sắp xếp theo số lần vi phạm giảm dần.`,
+      },
+      {
+        header: "Từ 2 file: chấm công + danh sách nhân viên",
+        content: `So sánh 2 file:
+- File 1: Bảng chấm công tháng {{tháng}}
+- File 2: Danh sách nhân viên với phòng ban
+
+Yêu cầu:
+1. Mapping tên nhân viên với phòng ban
+2. Thống kê đi muộn/về sớm theo phòng ban
+3. Top 5 phòng ban có tỷ lệ vi phạm cao nhất
+4. Đề xuất cải thiện cho từng phòng ban`,
+      },
+      {
+        header: "Tạo báo cáo tổng hợp tháng",
+        content: `Từ dữ liệu chấm công đã phân tích, tạo báo cáo tổng hợp tháng {{tháng/năm}}:
+
+1. Executive summary (3 dòng)
+2. Biểu đồ xu hướng đi muộn theo tuần
+3. So sánh với tháng trước
+4. Danh sách nhân viên cần nhắc nhở (>3 lần/tháng)
+5. Đề xuất chính sách cải thiện
+
+Format: Word/PDF, có header công ty {{tên công ty}}`,
+      },
+    ],
+    note: "Cần upload file Excel/CSV chấm công. Claude xử lý file tốt hơn ChatGPT. Nhớ kiểm tra lại số liệu vì AI có thể nhầm khi file quá dài.",
+    author: "Trang",
     createdAt: new Date("2026-03-25"),
-    tagIds: ["gemini", "midjourney", "image", "tech"],
-  },
-  {
-    title: "Mockup UI màn hình app",
-    content: `Tạo mockup giao diện ứng dụng mobile với yêu cầu:
-- Platform: {{iOS / Android}}
-- Style: minimalist, clean
-- Màu chủ đạo: {{màu chủ đạo}}
-- Màn hình cần mockup: {{tên màn hình, ví dụ: Login, Dashboard, Profile}}
-- Bao gồm: status bar, bottom navigation, các UI element cơ bản`,
-    author: "Dat",
-    createdAt: new Date("2026-03-22"),
-    tagIds: ["gemini", "image", "tech"],
+    tagIds: ["claude", "chatgpt", "text", "accounting"],
   },
   {
     title: "Email chào hàng khách doanh nghiệp",
-    content: `Viết email chào hàng B2B cho {{tên công ty khách}}, ngành {{ngành khách hàng}}.
+    items: [
+      {
+        header: "Email giới thiệu lần đầu",
+        content: `Viết email chào hàng B2B cho {{tên công ty khách}}, ngành {{ngành khách hàng}}.
 
 Yêu cầu:
 - Tone: chuyên nghiệp, trang trọng nhưng không cứng nhắc
@@ -68,14 +102,29 @@ Yêu cầu:
 - Nhấn mạnh: ROI, tiết kiệm thời gian, hỗ trợ kỹ thuật 24/7
 - CTA: đặt lịch demo 30 phút
 - Ký tên: {{tên người gửi}}, {{chức vụ}}`,
-    note: "Luôn thêm tên công ty khách vào dòng đầu để tạo cảm giác cá nhân hoá. Sau khi AI viết xong, đọc lại và điều chỉnh tone cho phù hợp với từng khách.",
+      },
+      {
+        header: "Email follow-up sau demo",
+        content: `Viết email follow-up sau buổi demo cho {{tên khách hàng}}:
+- Cảm ơn đã tham gia demo
+- Tóm tắt 3 điểm chính đã trình bày
+- Giải đáp câu hỏi khách hàng nêu ra: {{câu hỏi}}
+- Đề xuất gói phù hợp: {{tên gói}}
+- CTA: ký hợp đồng trial 14 ngày
+- Deadline ưu đãi: {{ngày hết hạn}}`,
+      },
+    ],
+    note: "Luôn thêm tên công ty khách vào dòng đầu để tạo cảm giác cá nhân hoá.",
     author: "Hương",
     createdAt: new Date("2026-03-15"),
     tagIds: ["claude", "chatgpt", "text", "marketing", "sale"],
   },
   {
     title: "Slide pitch deck sản phẩm",
-    content: `Tạo outline cho slide pitch deck {{tên sản phẩm/dịch vụ}}, gồm 10 slide:
+    items: [
+      {
+        header: "Outline 10 slide chính",
+        content: `Tạo outline cho slide pitch deck {{tên sản phẩm/dịch vụ}}, gồm 10 slide:
 
 1. Cover — tên, tagline
 2. Problem — vấn đề thị trường
@@ -89,28 +138,12 @@ Yêu cầu:
 10. Ask — cần gì từ investor/đối tác
 
 Mỗi slide: 1 tiêu đề + 3–4 bullet points ngắn gọn.`,
+      },
+    ],
     note: "Dùng output này làm outline, sau đó đưa vào Gamma.app hoặc Canva để tạo slide thực tế.",
     author: "Nam",
     createdAt: new Date("2026-03-08"),
     tagIds: ["chatgpt", "claude", "ppt", "marketing"],
-  },
-  {
-    title: "Tóm tắt báo cáo tài chính tháng",
-    content: `Phân tích và tóm tắt báo cáo tài chính tháng {{tháng/năm}} dưới đây:
-
-[Paste nội dung báo cáo vào đây]
-
-Yêu cầu output:
-1. Tổng quan 3 dòng
-2. Các chỉ số chính: doanh thu, chi phí, lợi nhuận gộp, lợi nhuận ròng
-3. So sánh với tháng trước (tăng/giảm %)
-4. Top 3 điểm đáng chú ý
-5. Đề xuất 2–3 action items cho tháng tới
-Định dạng: bullet points, ngắn gọn, dễ đọc.`,
-    note: "Nhớ xoá thông tin nhạy cảm trước khi paste vào AI. Claude cho kết quả phân tích sâu hơn ChatGPT.",
-    author: "Trang",
-    createdAt: new Date("2026-03-01"),
-    tagIds: ["claude", "chatgpt", "text", "accounting"],
   },
 ];
 
@@ -125,10 +158,17 @@ async function main() {
 
   await prisma.tag.createMany({ data: TAGS });
 
-  for (const { tagIds, ...promptData } of PROMPTS) {
+  for (const { tagIds, items, ...promptData } of PROMPTS) {
     await prisma.prompt.create({
       data: {
         ...promptData,
+        items: {
+          create: items.map((item, idx) => ({
+            header: item.header,
+            content: item.content,
+            position: idx,
+          })),
+        },
         tags: {
           create: tagIds.map((tagId) => ({ tagId })),
         },

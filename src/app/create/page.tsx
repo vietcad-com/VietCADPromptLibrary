@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Tag, TagGroup, TagPool } from "@/types";
+import { Tag, TagGroup, TagPool, PromptItem } from "@/types";
 import { TagBadge } from "@/components/TagBadge";
 import { AddTagModal } from "@/components/AddTagModal";
 
@@ -12,20 +12,17 @@ const GROUP_LABELS: Record<TagGroup, string> = {
   type: "Loại output",
   topic: "Chủ đề",
 };
-const GROUP_BORDER: Record<TagGroup, string> = {
-  model: "rgba(0,0,0,0.08)",
-  type: "rgba(0,0,0,0.08)",
-  topic: "rgba(0,0,0,0.08)",
-};
 
 type FormTab = "edit" | "preview";
+
+const emptyItem = (): PromptItem => ({ header: "", content: "", position: 0 });
 
 export default function CreatePage() {
   const router = useRouter();
 
   const [tab, setTab] = useState<FormTab>("edit");
   const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+  const [items, setItems] = useState<PromptItem[]>([emptyItem()]);
   const [note, setNote] = useState("");
   const [tagPool, setTagPool] = useState<TagPool>({ model: [], type: [], topic: [] });
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
@@ -33,7 +30,6 @@ export default function CreatePage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch tags from API
   useEffect(() => {
     fetch("/api/tags")
       .then((r) => r.json())
@@ -65,10 +61,37 @@ export default function CreatePage() {
     }
   };
 
+  // Item management
+  const updateItem = (idx: number, field: "header" | "content", value: string) => {
+    setItems((prev) => prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item)));
+    setErrors((prev) => ({ ...prev, items: "" }));
+  };
+
+  const addItem = () => {
+    setItems((prev) => [...prev, emptyItem()]);
+  };
+
+  const removeItem = (idx: number) => {
+    if (items.length <= 1) return;
+    setItems((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const moveItem = (idx: number, direction: -1 | 1) => {
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= items.length) return;
+    setItems((prev) => {
+      const next = [...prev];
+      [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+      return next;
+    });
+  };
+
   const validate = () => {
     const e: Record<string, string> = {};
     if (!title.trim()) e.title = "Vui lòng nhập tiêu đề";
-    if (!content.trim()) e.content = "Vui lòng nhập nội dung prompt";
+    if (items.some((item) => !item.header.trim() || !item.content.trim())) {
+      e.items = "Mỗi prompt cần có tiêu đề và nội dung";
+    }
     if (selectedTags.length === 0) e.tags = "Vui lòng chọn ít nhất 1 tag";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -83,7 +106,7 @@ export default function CreatePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title,
-        content,
+        items: items.map((item, idx) => ({ header: item.header, content: item.content, position: idx })),
         note: note || undefined,
         author: "User",
         tagIds: selectedTags.map((t) => t.id),
@@ -101,7 +124,7 @@ export default function CreatePage() {
 
   return (
     <div style={{ background: "#f9f8f5", minHeight: "calc(100vh - 52px)", padding: "32px 24px" }}>
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+      <div style={{ maxWidth: 700, margin: "0 auto" }}>
 
         {/* Form header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
@@ -135,14 +158,14 @@ export default function CreatePage() {
             {/* Title */}
             <div style={{ marginBottom: 20 }}>
               <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#5f5e5a", marginBottom: 6 }}>
-                Tiêu đề <span style={{ color: "#E24B4A" }}>*</span>
+                Tiêu đề chủ đề <span style={{ color: "#E24B4A" }}>*</span>
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => { setTitle(e.target.value); setErrors((p) => ({ ...p, title: "" })); }}
                 maxLength={100}
-                placeholder="Ví dụ: Tạo banner sản phẩm CAD"
+                placeholder="Ví dụ: Tổng hợp Chấm công Đi muộn Về sớm"
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -158,7 +181,7 @@ export default function CreatePage() {
               />
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
                 <span style={{ fontSize: 11, color: errors.title ? "#E24B4A" : "#9c9a92" }}>
-                  {errors.title || "Ngắn gọn, dễ tìm kiếm"}
+                  {errors.title || "Tên chung cho nhóm prompt"}
                 </span>
                 <span style={{ fontSize: 11, color: title.length > 90 ? "#BA7517" : "#9c9a92" }}>
                   {title.length} / 100
@@ -166,40 +189,159 @@ export default function CreatePage() {
               </div>
             </div>
 
-            {/* Content */}
+            {/* Prompt Items */}
             <div style={{ marginBottom: 20 }}>
               <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#5f5e5a", marginBottom: 6 }}>
-                Nội dung prompt <span style={{ color: "#E24B4A" }}>*</span>
+                Danh sách prompt <span style={{ color: "#E24B4A" }}>*</span>
               </label>
-              <textarea
-                value={content}
-                onChange={(e) => { setContent(e.target.value); setErrors((p) => ({ ...p, content: "" })); }}
-                rows={7}
-                maxLength={5000}
-                placeholder={"Nhập prompt của bạn tại đây...\n\nTip: dùng {{biến}} cho phần cần thay đổi, ví dụ {{tên sản phẩm}}, {{ngôn ngữ}}"}
+              {errors.items && (
+                <p style={{ fontSize: 11, color: "#E24B4A", marginBottom: 8 }}>{errors.items}</p>
+              )}
+
+              {items.map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    background: "#fff",
+                    border: "0.5px solid rgba(0,0,0,0.12)",
+                    borderRadius: 10,
+                    padding: "14px 16px",
+                    marginBottom: 10,
+                  }}
+                >
+                  {/* Item header row */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                    <span
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        background: "#378ADD",
+                        color: "#fff",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {idx + 1}
+                    </span>
+                    <input
+                      type="text"
+                      value={item.header}
+                      onChange={(e) => updateItem(idx, "header", e.target.value)}
+                      placeholder={`Tiêu đề prompt ${idx + 1}, ví dụ: Từ file chi tiết`}
+                      style={{
+                        flex: 1,
+                        padding: "7px 10px",
+                        borderRadius: 6,
+                        border: "0.5px solid rgba(0,0,0,0.12)",
+                        background: "transparent",
+                        color: "#1a1a18",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        outline: "none",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                    <div style={{ display: "flex", gap: 2 }}>
+                      <button
+                        onClick={() => moveItem(idx, -1)}
+                        disabled={idx === 0}
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 6,
+                          border: "0.5px solid rgba(0,0,0,0.08)",
+                          background: "transparent",
+                          cursor: idx === 0 ? "default" : "pointer",
+                          opacity: idx === 0 ? 0.3 : 1,
+                          fontSize: 12,
+                          color: "#5f5e5a",
+                        }}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        onClick={() => moveItem(idx, 1)}
+                        disabled={idx === items.length - 1}
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 6,
+                          border: "0.5px solid rgba(0,0,0,0.08)",
+                          background: "transparent",
+                          cursor: idx === items.length - 1 ? "default" : "pointer",
+                          opacity: idx === items.length - 1 ? 0.3 : 1,
+                          fontSize: 12,
+                          color: "#5f5e5a",
+                        }}
+                      >
+                        ↓
+                      </button>
+                      {items.length > 1 && (
+                        <button
+                          onClick={() => removeItem(idx)}
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: 6,
+                            border: "0.5px solid rgba(0,0,0,0.08)",
+                            background: "transparent",
+                            cursor: "pointer",
+                            fontSize: 14,
+                            color: "#E24B4A",
+                          }}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {/* Item content */}
+                  <textarea
+                    value={item.content}
+                    onChange={(e) => updateItem(idx, "content", e.target.value)}
+                    rows={5}
+                    placeholder={"Nhập nội dung prompt...\n\nTip: dùng {{biến}} cho phần cần thay đổi"}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "0.5px solid rgba(0,0,0,0.1)",
+                      background: "#fafaf8",
+                      color: "#1a1a18",
+                      fontSize: 13,
+                      outline: "none",
+                      fontFamily: "inherit",
+                      resize: "vertical",
+                      lineHeight: 1.65,
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              ))}
+
+              {/* Add prompt button */}
+              <button
+                onClick={addItem}
                 style={{
                   width: "100%",
-                  padding: "10px 12px",
+                  padding: "10px",
                   borderRadius: 8,
-                  border: `0.5px solid ${errors.content ? "#E24B4A" : "rgba(0,0,0,0.15)"}`,
-                  background: "#fff",
-                  color: "#1a1a18",
+                  border: "1px dashed rgba(0,0,0,0.15)",
+                  background: "transparent",
+                  color: "#378ADD",
                   fontSize: 13,
-                  outline: "none",
+                  fontWeight: 500,
+                  cursor: "pointer",
                   fontFamily: "inherit",
-                  resize: "vertical",
-                  lineHeight: 1.65,
-                  boxSizing: "border-box",
                 }}
-              />
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
-                <span style={{ fontSize: 11, color: errors.content ? "#E24B4A" : "#9c9a92" }}>
-                  {errors.content || "Hỗ trợ {{biến}} để tái sử dụng linh hoạt"}
-                </span>
-                <span style={{ fontSize: 11, color: content.length > 4500 ? "#BA7517" : "#9c9a92" }}>
-                  {content.length} / 5000
-                </span>
-              </div>
+              >
+                + Thêm prompt
+              </button>
             </div>
 
             {/* Note */}
@@ -253,7 +395,7 @@ export default function CreatePage() {
                     key={group}
                     style={{
                       paddingTop: idx > 0 ? 12 : 0,
-                      borderTop: idx > 0 ? `0.5px solid ${GROUP_BORDER[group]}` : "none",
+                      borderTop: idx > 0 ? "0.5px solid rgba(0,0,0,0.08)" : "none",
                     }}
                   >
                     <p
@@ -300,9 +442,6 @@ export default function CreatePage() {
               {errors.tags && (
                 <p style={{ fontSize: 11, color: "#E24B4A", marginTop: 5 }}>{errors.tags}</p>
               )}
-              <p style={{ fontSize: 11, color: "#9c9a92", marginTop: 5 }}>
-                Tag mới tạo sẽ được chia sẻ cho cả team
-              </p>
             </div>
 
             {/* Footer */}
@@ -366,34 +505,76 @@ export default function CreatePage() {
                     ? selectedTags.map((tag) => <TagBadge key={tag.id} tag={tag} size="sm" />)
                     : <span style={{ fontSize: 12, color: "#9c9a92" }}>(Chưa chọn tag)</span>
                   }
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: "#5f5e5a",
+                      background: "#f1efe8",
+                      border: "0.5px solid rgba(0,0,0,0.08)",
+                      borderRadius: 20,
+                      padding: "3px 8px",
+                    }}
+                  >
+                    {items.filter((i) => i.header.trim() || i.content.trim()).length} prompt
+                  </span>
                 </div>
               </div>
 
               {/* Preview body */}
               <div style={{ padding: "20px 24px" }}>
-                <p style={{ fontSize: 11, fontWeight: 600, color: "#9c9a92", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>
-                  Nội dung prompt
-                </p>
-                <pre
-                  style={{
-                    background: "#f1efe8",
-                    border: "0.5px solid rgba(0,0,0,0.08)",
-                    borderRadius: 10,
-                    padding: "14px 16px",
-                    fontSize: 13,
-                    lineHeight: 1.75,
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                    color: content ? "#1a1a18" : "#9c9a92",
-                    fontFamily: "inherit",
-                    margin: 0,
-                  }}
-                >
-                  {content || "(Chưa có nội dung)"}
-                </pre>
+                {items.map((item, idx) => (
+                  <div key={idx} style={{ marginBottom: idx < items.length - 1 ? 20 : (note ? 20 : 0) }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#1a1a18",
+                        marginBottom: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: "50%",
+                          background: "#378ADD",
+                          color: "#fff",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {idx + 1}
+                      </span>
+                      {item.header || "(Chưa có tiêu đề)"}
+                    </div>
+                    <pre
+                      style={{
+                        background: "#f1efe8",
+                        border: "0.5px solid rgba(0,0,0,0.08)",
+                        borderRadius: 10,
+                        padding: "14px 16px",
+                        fontSize: 13,
+                        lineHeight: 1.75,
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        color: item.content ? "#1a1a18" : "#9c9a92",
+                        fontFamily: "inherit",
+                        margin: 0,
+                      }}
+                    >
+                      {item.content || "(Chưa có nội dung)"}
+                    </pre>
+                  </div>
+                ))}
 
                 {note && (
-                  <div style={{ marginTop: 16 }}>
+                  <div>
                     <p style={{ fontSize: 11, fontWeight: 600, color: "#9c9a92", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>
                       Chú thích
                     </p>
@@ -437,7 +618,6 @@ export default function CreatePage() {
         )}
       </div>
 
-      {/* Add tag modal */}
       {addTagModal.open && (
         <AddTagModal
           defaultGroup={addTagModal.group}

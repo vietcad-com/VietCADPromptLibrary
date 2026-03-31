@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET /api/prompts — list all prompts with tags
+// GET /api/prompts — list all prompts with items and tags
 export async function GET() {
   const prompts = await prisma.prompt.findMany({
-    include: { tags: { include: { tag: true } } },
+    include: {
+      items: { orderBy: { position: "asc" } },
+      tags: { include: { tag: true } },
+    },
     orderBy: { createdAt: "desc" },
   });
 
   const result = prompts.map((p) => ({
     id: p.id,
     title: p.title,
-    content: p.content,
+    items: p.items.map((item) => ({
+      id: item.id,
+      header: item.header,
+      content: item.content,
+      position: item.position,
+    })),
     note: p.note,
     author: p.author,
     createdAt: p.createdAt.toISOString().slice(0, 10),
@@ -25,13 +33,26 @@ export async function GET() {
   return NextResponse.json(result);
 }
 
-// POST /api/prompts — create a new prompt
+// POST /api/prompts — create a new prompt with items
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { title, content, note, author, tagIds } = body;
+  const { title, items, note, author, tagIds } = body;
 
-  if (!title?.trim() || !content?.trim()) {
-    return NextResponse.json({ error: "Title and content are required" }, { status: 400 });
+  if (!title?.trim()) {
+    return NextResponse.json({ error: "Title is required" }, { status: 400 });
+  }
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return NextResponse.json({ error: "At least one prompt item is required" }, { status: 400 });
+  }
+
+  for (let i = 0; i < items.length; i++) {
+    if (!items[i].header?.trim() || !items[i].content?.trim()) {
+      return NextResponse.json(
+        { error: `Prompt ${i + 1}: header and content are required` },
+        { status: 400 }
+      );
+    }
   }
 
   if (!Array.isArray(tagIds) || tagIds.length === 0) {
@@ -41,21 +62,35 @@ export async function POST(req: NextRequest) {
   const prompt = await prisma.prompt.create({
     data: {
       title: title.trim(),
-      content: content.trim(),
       note: note?.trim() || null,
       author: author?.trim() || "Anonymous",
+      items: {
+        create: items.map((item: { header: string; content: string }, idx: number) => ({
+          header: item.header.trim(),
+          content: item.content.trim(),
+          position: idx,
+        })),
+      },
       tags: {
         create: tagIds.map((tagId: string) => ({ tagId })),
       },
     },
-    include: { tags: { include: { tag: true } } },
+    include: {
+      items: { orderBy: { position: "asc" } },
+      tags: { include: { tag: true } },
+    },
   });
 
   return NextResponse.json(
     {
       id: prompt.id,
       title: prompt.title,
-      content: prompt.content,
+      items: prompt.items.map((item) => ({
+        id: item.id,
+        header: item.header,
+        content: item.content,
+        position: item.position,
+      })),
       note: prompt.note,
       author: prompt.author,
       createdAt: prompt.createdAt.toISOString().slice(0, 10),

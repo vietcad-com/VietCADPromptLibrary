@@ -6,10 +6,17 @@ export interface Tag {
   group: TagGroup;
 }
 
+export interface PromptItem {
+  id?: string;
+  header: string;
+  content: string;
+  position: number;
+}
+
 export interface Prompt {
   id: string;
   title: string;
-  content: string;
+  items: PromptItem[];
   note?: string;
   tags: Tag[];
   author: string;

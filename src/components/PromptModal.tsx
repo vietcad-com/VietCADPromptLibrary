@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Prompt } from "@/types";
 import { TagBadge } from "./TagBadge";
 
@@ -10,7 +10,8 @@ interface PromptModalProps {
 }
 
 export function PromptModal({ prompt, onClose }: PromptModalProps) {
-  // Close on Escape
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -19,17 +20,32 @@ export function PromptModal({ prompt, onClose }: PromptModalProps) {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  // Prevent body scroll
   useEffect(() => {
     if (prompt) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
     return () => { document.body.style.overflow = ""; };
   }, [prompt]);
 
+  useEffect(() => {
+    if (copiedIdx !== null) {
+      const timer = setTimeout(() => setCopiedIdx(null), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [copiedIdx]);
+
   if (!prompt) return null;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(prompt.content);
+  const handleCopyItem = (idx: number) => {
+    navigator.clipboard.writeText(prompt.items[idx].content);
+    setCopiedIdx(idx);
+  };
+
+  const handleCopyAll = () => {
+    const allContent = prompt.items
+      .map((item, idx) => `--- Prompt ${idx + 1}: ${item.header} ---\n${item.content}`)
+      .join("\n\n");
+    navigator.clipboard.writeText(allContent);
+    setCopiedIdx(-1);
   };
 
   return (
@@ -52,7 +68,7 @@ export function PromptModal({ prompt, onClose }: PromptModalProps) {
           background: "#fff",
           borderRadius: 16,
           width: "100%",
-          maxWidth: 640,
+          maxWidth: 700,
           maxHeight: "85vh",
           display: "flex",
           flexDirection: "column",
@@ -78,6 +94,18 @@ export function PromptModal({ prompt, onClose }: PromptModalProps) {
               {prompt.tags.map((tag) => (
                 <TagBadge key={tag.id} tag={tag} size="sm" />
               ))}
+              <span
+                style={{
+                  fontSize: 11,
+                  color: "#5f5e5a",
+                  background: "#f1efe8",
+                  border: "0.5px solid rgba(0,0,0,0.08)",
+                  borderRadius: 20,
+                  padding: "3px 8px",
+                }}
+              >
+                {prompt.items.length} prompt
+              </span>
             </div>
           </div>
           <button
@@ -103,38 +131,87 @@ export function PromptModal({ prompt, onClose }: PromptModalProps) {
 
         {/* Body — scrollable */}
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
-          {/* Prompt content */}
-          <div style={{ marginBottom: prompt.note ? 20 : 0 }}>
+          {/* Prompt items */}
+          {prompt.items.map((item, idx) => (
             <div
+              key={idx}
               style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color: "#9c9a92",
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                marginBottom: 8,
+                marginBottom: idx < prompt.items.length - 1 ? 20 : (prompt.note ? 20 : 0),
               }}
             >
-              Nội dung prompt
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "#1a1a18",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: "50%",
+                      background: "#378ADD",
+                      color: "#fff",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {idx + 1}
+                  </span>
+                  {item.header}
+                </div>
+                <button
+                  onClick={() => handleCopyItem(idx)}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: 6,
+                    border: "0.5px solid rgba(0,0,0,0.12)",
+                    background: copiedIdx === idx ? "#E1F5EE" : "transparent",
+                    color: copiedIdx === idx ? "#085041" : "#9c9a92",
+                    fontSize: 11,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    transition: "all .15s",
+                  }}
+                >
+                  {copiedIdx === idx ? "Copied!" : "Copy"}
+                </button>
+              </div>
+              <pre
+                style={{
+                  background: "#f1efe8",
+                  border: "0.5px solid rgba(0,0,0,0.08)",
+                  borderRadius: 10,
+                  padding: "14px 16px",
+                  fontSize: 13,
+                  lineHeight: 1.75,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  color: "#1a1a18",
+                  fontFamily: "inherit",
+                  margin: 0,
+                }}
+              >
+                {item.content}
+              </pre>
             </div>
-            <pre
-              style={{
-                background: "#f1efe8",
-                border: "0.5px solid rgba(0,0,0,0.08)",
-                borderRadius: 10,
-                padding: "14px 16px",
-                fontSize: 13,
-                lineHeight: 1.75,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                color: "#1a1a18",
-                fontFamily: "inherit",
-                margin: 0,
-              }}
-            >
-              {prompt.content}
-            </pre>
-          </div>
+          ))}
 
           {/* Note */}
           {prompt.note && (
@@ -199,12 +276,12 @@ export function PromptModal({ prompt, onClose }: PromptModalProps) {
               Đóng
             </button>
             <button
-              onClick={handleCopy}
+              onClick={handleCopyAll}
               style={{
                 padding: "8px 18px",
                 borderRadius: 8,
                 border: "none",
-                background: "#378ADD",
+                background: copiedIdx === -1 ? "#085041" : "#378ADD",
                 color: "#fff",
                 fontSize: 13,
                 fontWeight: 500,
@@ -212,9 +289,10 @@ export function PromptModal({ prompt, onClose }: PromptModalProps) {
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
+                transition: "background .15s",
               }}
             >
-              Copy prompt
+              {copiedIdx === -1 ? "Copied!" : "Copy tất cả"}
             </button>
           </div>
         </div>
